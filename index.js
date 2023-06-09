@@ -29,6 +29,7 @@ async function run() {
   try {
 
    const instructorsCollection = client.db("schoolPhotography").collection("instructorCollection");
+   const usersData = client.db("schoolPhotography").collection("users");
   
  // Get all instructorsCollection data 
     app.get("/instructors", async (req, res) => {
@@ -37,6 +38,13 @@ async function run() {
       const instructor = await cursor.toArray();
       res.send(instructor);
     });
+ // Create user account 
+    app.post("/users", async (req, res) => {
+        const saverusers = req.body;
+      const results = await usersData.insertOne(saverusers);
+      res.send(results);
+    });
+ 
 
 
      // Send a ping to confirm a successful connection
