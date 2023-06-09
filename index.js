@@ -44,6 +44,13 @@ async function run() {
       const results = await usersData.insertOne(saverusers);
       res.send(results);
     });
+ // Get the user account 
+    app.get("/users", async (req, res) => {
+      const query = {}
+      const cursor = usersData.find(query);
+      const usersAccount = await cursor.toArray();
+      res.send( usersAccount);
+    });
  
 
 
