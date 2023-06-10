@@ -3,7 +3,7 @@ const app = express();
 const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const port = process.env.PORT || 4000;
-
+const { ObjectId } = require("mongodb");
 //This is very very important to connect database for secure pass and user
 require("dotenv").config();
 // middleware
@@ -30,6 +30,7 @@ async function run() {
 
    const instructorsCollection = client.db("schoolPhotography").collection("instructorCollection");
    const usersData = client.db("schoolPhotography").collection("users");
+   const classData = client.db("schoolPhotography").collection("classCollection");
   
  // Get all instructorsCollection data 
     app.get("/instructors", async (req, res) => {
@@ -51,7 +52,47 @@ async function run() {
       const usersAccount = await cursor.toArray();
       res.send( usersAccount);
     });
- 
+//  // post the select instructor id
+//     app.post("/myclass", async (req, res) => {
+//         const addSelectId = req.body;
+//       const results = await classData.insertOne(addSelectId);
+//       res.send(results);
+//     });
+    
+    
+    
+// POST endpoint to save the selected instructor ID
+ // Create user account 
+    app.post("/myclass", async (req, res) => {
+        const addSelectedData = req.body;
+      const results = await classData.insertOne(addSelectedData);
+      res.send(results);
+    });
+
+  
+    
+    
+    
+
+
+
+  
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
 
      // Send a ping to confirm a successful connection
