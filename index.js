@@ -52,25 +52,39 @@ async function run() {
       const usersAccount = await cursor.toArray();
       res.send( usersAccount);
     });
-//  // post the select instructor id
-//     app.post("/myclass", async (req, res) => {
-//         const addSelectId = req.body;
-//       const results = await classData.insertOne(addSelectId);
-//       res.send(results);
-//     });
-    
-    
-    
-// POST endpoint to save the selected instructor ID
- // Create user account 
+   
+ // Create my class section
     app.post("/myclass", async (req, res) => {
         const addSelectedData = req.body;
       const results = await classData.insertOne(addSelectedData);
       res.send(results);
     });
 
-  
+   // Get  my class data
+    app.get("/myclass", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const cursor = classData.find(query);
+      const classSelect = await cursor.toArray();
+      res.send(classSelect);
+    });
+
+     // my class data delete 
+    app.delete("/myclass/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("please delete from database", id);
+      const query = { _id: new ObjectId(id) };
+      const result = await classData.deleteOne(query);
+      res.send(result);
+    });
     
+     app.get('/myclass/:id', async (req,res)=>{
+            const id = req.params.id;
+            const query = { _id: new  ObjectId(id)};
+            const select = await classData.findOne(query);
+            res.send(select)
+        })
+
     
     
 
