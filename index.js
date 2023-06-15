@@ -1,32 +1,20 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const { ObjectId } = require("mongodb");
-const jwt = require('jsonwebtoken');
+
+//This is very very important to connect database for secure pass and user
+require("dotenv").config();
 const stripe = require("stripe")(process.env.PAYMENT_CREATE_INTENT_KEY);
 const port = process.env.PORT || 4000;
 
 
 
-
-//This is very very important to connect database for secure pass and user
-require("dotenv").config();
 // middleware
 app.use(cors());
 app.use(express.json());
-
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.gojv5gq.mongodb.net/?retryWrites=true&w=majority`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
-
 
 function verifyJWT(req, res, next) {
 
@@ -47,6 +35,21 @@ function verifyJWT(req, res, next) {
 
 }
 
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.gojv5gq.mongodb.net/?retryWrites=true&w=majority`;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+
+
+
+
 
 async function run() {
   try {
@@ -54,7 +57,77 @@ async function run() {
    const instructorsCollection = client.db("schoolPhotography").collection("instructorCollection");
    const usersData = client.db("schoolPhotography").collection("users");
    const classData = client.db("schoolPhotography").collection("classCollection");
-   const paymentsCollection = client.db('schoolPhotography').collection('payments');
+    const paymentsCollection = client.db('schoolPhotography').collection('payments');
+    
+
+
+     app.post('/jwt', (req, res) => {
+       const user = req.body;
+       console.log(user);
+      const token = jwt.sign(user, process.env.JWT_TOKEN, { expiresIn: "1h" })
+console.log(token);
+      res.send({ token })
+    })
+
+
+// Warning: use verifyJWT before using verifyAdmin
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded.email;
+  console.log(email);
+  const query = { email: email };
+  const user = await usersData.findOne(query);
+  if (user?.role !== "admin") {
+    return res.status(403).send({ error: true, message: "forbidden message" });
+  }
+  next();
+};
+
+   // Get all user accounts
+app.get("/users", async (req, res) => {
+  const query = {};
+  const cursor = usersData.find(query);
+  const usersAccount = await cursor.toArray();
+  res.send(usersAccount);
+});
+
+
+
+// Admin-only users related APIs
+// app.get('/users/admin',  async (req, res) => {
+//   const result = await usersData.find().toArray();
+//   res.send(result);
+// });
+
+app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersData.findOne(query);
+        res.send(user);
+  // ({ isAdmin: user?.role === 'admin' });
+        })
+app.get('/users/instructor/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersData.findOne(query);
+        res.send(user);
+  // ({ isAdmin: user?.role === 'admin' });
+        })
+
+ // Create user account  and check user
+  
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email }
+      const existingUser = await usersData.findOne(query);
+
+      if (existingUser) {
+        return res.send({ message: 'user already exists' })
+      }
+
+      const result = await  usersData.insertOne(user);
+      res.send(result);
+    });
+
  // Get all instructorsCollection data 
     app.get("/instructors", async (req, res) => {
       const query = {};
@@ -62,38 +135,35 @@ async function run() {
       const instructor = await cursor.toArray();
       res.send(instructor);
     });
- // Create user account 
-    app.post("/users", async (req, res) => {
-        const saverusers = req.body;
-      const results = await usersData.insertOne(saverusers);
-      res.send(results);
-    });
- // Get the user account 
-    app.get("/users", async (req, res) => {
-      const query = {}
-      const cursor = usersData.find(query);
-      const usersAccount = await cursor.toArray();
-      res.send( usersAccount);
-    });
-   
+
+ 
+
+
  // Create my class section
-    app.post("/myclass", async (req, res) => {
-        const addSelectedData = req.body;
+    app.post("/myclass",  async (req, res) => {
+      const addSelectedData = req.body;
+      
       const results = await classData.insertOne(addSelectedData);
       res.send(results);
     });
 
    // Get  my class data
-    app.get("/dashboard/myclass", async (req, res) => {
+    app.get("/myclass", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
+
+  //  const decodedEmail = req.decoded.email;
+  //     if (email !== decodedEmail) {
+  //       return res.status(403).send({ error: true, message: 'forbidden access' })
+  //     }
+
       const cursor = classData.find(query);
       const classSelect = await cursor.toArray();
       res.send(classSelect);
     });
 
      // my class data delete 
-    app.delete("/dashboard/myclass/:id", async (req, res) => {
+    app.delete("/myclass/:id",  async (req, res) => {
       const id = req.params.id;
       console.log("please delete from database", id);
       const query = { _id: new ObjectId(id) };
@@ -101,62 +171,92 @@ async function run() {
       res.send(result);
     });
     
-     app.get('/dashboard/myclass/:id', async (req,res)=>{
+     app.get('/myclass/:id', async (req,res)=>{
             const id = req.params.id;
             const query = { _id: new  ObjectId(id)};
             const select = await classData.findOne(query);
             res.send(select)
-        })
+     })
+    
+    
+       
+  
+
+
+     // Update from manage users pages 
+   app.patch('/users/instructor/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: 'instructor'
+        },
+      };
+
+      const result = await usersData.updateOne(filter, updateDoc);
+      res.send(result);
+
+    })
+
+   // Update from manage users pages 
+    app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: 'admin'
+        },
+      };
+
+      const result = await usersData.updateOne(filter, updateDoc);
+      res.send(result);
+
+    })
+    // Delete from manage users pages 
+     //users data delete 
+    app.delete("/users/:id",  async (req, res) => {
+      const id = req.params.id;
+      console.log("please delete from database", id);
+      const query = { _id: new ObjectId(id) };
+      const result = await usersData.deleteOne(query);
+      res.send(result);
+    });
+
+
+
+
+
+    // create payment intent
+    app.post('/create-payment-intent',  async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
+
+    // payment related api
+    app.post('/payments',  async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentsCollection.insertOne(payment);
+
+      // const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+      // const deleteResult = await cartCollection.deleteMany(query)
+
+      res.send(insertResult );
+    })
 
   
     
-      app.post('/create-payment-intent', async (req, res) => {
-  const select = req.body;
-  const price = select.price;
-  const amount = price * 100;
-
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      currency: 'usd',
-      amount: amount,
-      payment_method_types: ['card'],
-    });
-    
-    res.send({
-      clientSecret: paymentIntent.client_secret,
-    });
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    res.status(500).send('Error creating payment intent');
-  }
-});
-
-     app.post('/payments', async (req, res) =>{
-            const payment = req.body;
-            const result = await paymentsCollection.insertOne(payment);
-            // const id = payment.selectId
-            // const collectionId = payment.collectionId
-            // const filter2 = {collectionId: collectionId}
-            // const filter3 = {_id: ObjectId(collectionId)}
-            // const filter4 = {_id: ObjectId(collectionId)}
-            // const filter = {_id: ObjectId(id)}
-            // const updatedDoc = {
-            //     $set: {
-            //         paid: true,
-            //         transactionId: payment.transactionId
-            //     }
-            // }
-            // const deleteResult = await phoneCollections.deleteOne(filter3)
-            // const updatedResult2 = await bookingCollections.updateMany(filter2, updatedDoc)
-            // const updatedResult = await bookingCollections.updateOne(filter, updatedDoc)
-            // const updatedResult3 = await myProductCollections.updateOne(filter4, updatedDoc)
-            res.send(result);
-        })
-
-
-  
-    
-    
     
     
 
@@ -166,28 +266,20 @@ async function run() {
 
 
 
-// const crypto = require('crypto');
-
-// const generateRandomSecretKey = () => {
-//   const byteLength = 32;
-//   return crypto.randomBytes(byteLength).toString('hex');
-// };
-
-// const secretKey = generateRandomSecretKey();
-// console.log(secretKey);
 
 
+ 
 
- app.get('/jwt', async (req, res) => {
-            const email = req.query.email;
-            const query = { email: email };
-            const user = await usersData.findOne(query);
-            if (user) {
-                const token = jwt.sign({ email }, process.env.JWT_TOKEN, { expiresIn: '1h' })
-                return res.send({ accessToken: token });
-            }
-            res.status(403).send({ accessToken: '' })
-        });
+//  app.get('/jwt', async (req, res) => {
+//             const email = req.query.email;
+//             const query = { email: email };
+//             const user = await usersData.findOne(query);
+//             if (user) {
+//                 const token = jwt.sign({ email }, process.env.JWT_TOKEN, { expiresIn: '1h' })
+//                 return res.send({ accessToken: token });
+//             }
+//             res.status(403).send({ accessToken: '' })
+//         });
 
 
 
