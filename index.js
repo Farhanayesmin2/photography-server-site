@@ -57,7 +57,7 @@ async function run() {
    const instructorsCollection = client.db("schoolPhotography").collection("instructorCollection");
    const usersData = client.db("schoolPhotography").collection("users");
    const classData = client.db("schoolPhotography").collection("classCollection");
-    const paymentsCollection = client.db('schoolPhotography').collection('payments');
+  const paymentsCollection = client.db('schoolPhotography').collection('payments');
     
 
 
@@ -110,7 +110,7 @@ app.get('/users/instructor/:email', async (req, res) => {
             const query = { email }
             const user = await usersData.findOne(query);
         res.send(user);
-  // ({ isAdmin: user?.role === 'admin' });
+  
         })
 
  // Create user account  and check user
@@ -245,17 +245,60 @@ app.get('/users/instructor/:email', async (req, res) => {
 
 
     // payment related api
-    app.post('/payments',  async (req, res) => {
-      const payment = req.body;
-      const insertResult = await paymentsCollection.insertOne(payment);
+   // Post payments classes
+ app.post("/payments", async (req, res) => {
+  try {
+    const payment = req.body;
+    console.log(payment);
+    const insertResult = await paymentsCollection.insertOne(payment);
+    const insertedId = insertResult.insertedId;
+    res.json({ insertedId });
+  } catch (error) {
+    console.error("Error inserting payment:", error);
+    res.status(500).json({ error: "Failed to insert payment" });
+  }
+});
 
-      // const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
-      // const deleteResult = await cartCollection.deleteMany(query)
+      // const id = payment.id;
+      // const class_id = req.query.class_id;
+      // const query = { _id: new ObjectId(id) };
+      // const email = payment.email;
 
-      res.send(insertResult );
-    })
+      // const filter = { _id: new ObjectId(class_id) };
+      // const filterInstructor = { email: email };
 
-  
+      // const updateDoc = {
+      //   $inc: {
+      //     totalEnrolled: 1,
+      //     availableSeats: -1,
+      //   },
+      // };
+      // const updateTotalStudent = {
+      //   $inc: {
+         
+      //   totalStudent: 1,
+      //   },
+      // };
+      // const result = await allClassesCollection.updateOne(filter, updateDoc);
+      // const updateStudentNumber = await instructorsCollection.updateOne(
+      //   filterInstructor,
+      //   updateTotalStudent
+      // );
+   
+    //  const deleteResult = await selectedClasses.deleteOne(query);
+
+    //  res.send({ insertResult, deleteResult, result, updateStudentNumber });
+    // });
+  // Get the all payment data 
+
+    app.get("/payments", async (req, res) => {
+   const userEmail = req.query.email;
+
+      const query = { email: userEmail };
+      const cursor = paymentsCollection.find(query);
+      const payment = await cursor.toArray();
+      res.send(payment);
+    });
     
     
     
