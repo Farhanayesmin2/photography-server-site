@@ -234,11 +234,16 @@ app.get('/users/admin/:email', async (req, res) => {
       if (existingIns) {
         return res.send("Instructor is already existing");
       }
-
       const result = await instructorData.insertOne(addInstructor);
       res.send(result);
     });
-
+// instructor class from instructor dashboard 
+    app.get("/instructor-class", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await instructorData.find(query).toArray();
+      res.send(result);
+    });
 
 
     // create payment intent
