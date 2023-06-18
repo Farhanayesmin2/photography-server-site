@@ -58,14 +58,14 @@ async function run() {
    const usersData = client.db("schoolPhotography").collection("users");
    const classData = client.db("schoolPhotography").collection("classCollection");
   const paymentsCollection = client.db('schoolPhotography').collection('payments');
-    
+   const instructorData  = client.db("schoolPhotography").collection("instructorData"); 
 
 
      app.post('/jwt', (req, res) => {
        const user = req.body;
-       console.log(user);
+     //  console.log(user);
       const token = jwt.sign(user, process.env.JWT_TOKEN, { expiresIn: "1h" })
-console.log(token);
+//console.log(token);
       res.send({ token })
     })
 
@@ -73,7 +73,7 @@ console.log(token);
 // Warning: use verifyJWT before using verifyAdmin
 const verifyAdmin = async (req, res, next) => {
   const email = req.decoded.email;
-  console.log(email);
+ // console.log(email);
   const query = { email: email };
   const user = await usersData.findOne(query);
   if (user?.role !== "admin") {
@@ -98,20 +98,26 @@ app.get("/users", async (req, res) => {
 //   res.send(result);
 // });
 
+// Admin-only users related APIs
 app.get('/users/admin/:email', async (req, res) => {
-            const email = req.params.email;
-            const query = { email }
+  const email = req.params.email;
+ // console.log(email);
+            const query = {  email };
             const user = await usersData.findOne(query);
-        res.send(user);
-  // ({ isAdmin: user?.role === 'admin' });
+ // const adminresult = { admin: user?.role === "admin" };
+  console.log(  user);
+      res.send(user);
         })
-app.get('/users/instructor/:email', async (req, res) => {
-            const email = req.params.email;
-            const query = { email }
-            const user = await usersData.findOne(query);
-        res.send(user);
-  
-        })
+    //Instructor-only users related APIs
+    app.get("/users/instructor/:email", async (req, res) => {
+      const email = req.params.email;
+    //  console.log(email);
+      const query = {  email };
+      const user = await usersData.findOne(query);
+      res.send(user);
+    });
+
+
 
  // Create user account  and check user
   
@@ -177,13 +183,8 @@ app.get('/users/instructor/:email', async (req, res) => {
             const select = await classData.findOne(query);
             res.send(select)
      })
-    
-    
-       
-  
-
-
-     // Update from manage users pages 
+   
+     // Update from admin manage users pages 
    app.patch('/users/instructor/:id', async (req, res) => {
       const id = req.params.id;
       console.log(id);
@@ -214,8 +215,8 @@ app.get('/users/instructor/:email', async (req, res) => {
       res.send(result);
 
     })
-    // Delete from manage users pages 
-     //users data delete 
+    
+     //users data delete, Delete from manage users pages 
     app.delete("/users/:id",  async (req, res) => {
       const id = req.params.id;
       console.log("please delete from database", id);
@@ -224,7 +225,19 @@ app.get('/users/instructor/:email', async (req, res) => {
       res.send(result);
     });
 
+// Add instructor from instructor dashboard 
+    app.post("/addInstructor", async (req, res) => {
+      const addInstructor = req.body;
+      const email = req.query.email;
+      const query = { email: email };
+      const existingIns = await instructorData.findOne(query);
+      if (existingIns) {
+        return res.send("Instructor is already existing");
+      }
 
+      const result = await instructorData.insertOne(addInstructor);
+      res.send(result);
+    });
 
 
 
@@ -301,6 +314,17 @@ app.get('/users/instructor/:email', async (req, res) => {
     });
     
     
+
+      // for payment history
+    app.get("/paymentHistory",  async (req, res) => {
+      const userEmail = req.query.email;
+      const query = { email: userEmail };
+      const result = await paymentsCollection
+        .find(query)
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
     
 
 
