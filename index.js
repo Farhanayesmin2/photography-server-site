@@ -244,8 +244,41 @@ app.get('/users/admin/:email', async (req, res) => {
       const result = await instructorData.find(query).toArray();
       res.send(result);
     });
+// instructor class delete from instructor dashboard 
+    app.delete("/instructor-class/:id", async (req, res) => {
+     const id = req.params.id;
+      console.log("please delete from database", id);
+      const query = { _id: new ObjectId(id) };
+      const result = await instructorData.deleteOne(query);
+      res.send(result);
+    });
 
+    // instructor update 
+   app.patch("/update/:id", async (req, res) => {
+        const updateItems = req.body;
+        const { class_name, picture, available_seats, price } = updateItems;
+        const id = req.params.id;
 
+        const option = { upsert: true };
+        const filter = { _id: new ObjectId(id) };
+
+        const updatedDoc = {
+          $set: {
+            class_name: class_name,
+            picture: picture,
+            available_seats: available_seats,
+            price: price,
+          },
+        };
+
+        const result = await instructorData.updateOne(
+          filter,
+          updatedDoc,
+          option
+        );
+        res.send(result);
+      }
+    );
     // create payment intent
     app.post('/create-payment-intent',  async (req, res) => {
       const { price } = req.body;
